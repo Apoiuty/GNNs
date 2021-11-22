@@ -42,10 +42,10 @@ class GNN(torch.nn.Module):
 
 
 class DiffPool(torch.nn.Module):
-    def __init__(self, hidden_dim, num_cluster):
+    def __init__(self, input_dim, hidden_dim, out_dim, num_cluster):
         super().__init__()
-        self.embedding = GNN(3, hidden_dim, hidden_dim, hidden_dim)
-        self.assignment = GNN(3, hidden_dim, hidden_dim, num_cluster)
+        self.embedding = GNN(3, input_dim, hidden_dim, out_dim)
+        self.assignment = GNN(3, input_dim, hidden_dim, num_cluster)
 
     def forward(self, x, a, mask=None):
         z = self.embedding(x, a, mask)
@@ -66,23 +66,19 @@ class Net(torch.nn.Module):
         self.max_node = max_node
         pool1_cluster = ceil(.25 * self.max_node)
         pool2_cluster = ceil(.25 * pool1_cluster)
-        self.gnn_before_p1 = GNN(2, dataset.num_features, hidden_dim, hidden_dim)
-        self.gnn_after_p1 = GNN(3, hidden_dim, hidden_dim, hidden_dim)
-        self.gnn_after_p2 = GNN(3, hidden_dim, hidden_dim, hidden_dim)
 
-        self.p1 = DiffPool(hidden_dim, pool1_cluster)
-        self.p2 = DiffPool(hidden_dim, pool2_cluster)
+        self.p1 = DiffPool(dataset.num_features, hidden_dim, hidden_dim, pool1_cluster)
+        self.p2 = DiffPool(hidden_dim, hidden_dim, hidden_dim, pool2_cluster)
+        self.final_embed = GNN(3, hidden_dim, hidden_dim, hidden_dim)
         self.mlp = torch.nn.Sequential(torch.nn.Linear(hidden_dim, hidden_dim // 2),
                                        torch.nn.BatchNorm1d(hidden_dim // 2),
                                        nn.ReLU(),
                                        nn.Linear(hidden_dim // 2, dataset.num_classes))
 
     def forward(self, x, a, mask=None):
-        x = self.gnn_before_p1(x, a, mask)
         x, a, l1, e1 = self.p1(x, a, mask)
-        x = self.gnn_after_p1(x, a)
         x, a, l2, e2 = self.p2(x, a)
-        x = self.gnn_after_p2(x, a)
+        x = self.final_embed(x, a)
         x = x.mean(dim=1)
         return self.mlp(x), l1 + l2 + e1 + e2
 

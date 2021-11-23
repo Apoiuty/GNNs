@@ -1,3 +1,4 @@
 /data/
 /venv/
 !/PoolingLayers/DiffPool_COLLAB.py
+/PoolingLayers/data/

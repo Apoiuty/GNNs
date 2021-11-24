@@ -73,10 +73,6 @@ val_cnt = int(.1 * len(dataset))
 test_cnt = len(dataset) - train_cnt - val_cnt
 train_data, val_data, test_data = torch.utils.data.random_split(dataset, [train_cnt, val_cnt, test_cnt],
                                                                 torch.random.manual_seed(0))
-max_node = 0
-for data in dataset:
-    if data.num_nodes > max_node:
-        max_node = data.num_nodes
 
 model = SAGPool(dataset.num_features, hidden_dim, dataset.num_classes, 3).to(device)
 criterion = torch.nn.CrossEntropyLoss()

@@ -23,6 +23,12 @@ class SortPool(torch.nn.Module):
         self.pool1 = nn.MaxPool1d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=5, stride=1)
         self.outdim = out_dim
+        self.mlp = nn.Sequential(
+            nn.Linear(3136, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, self.outdim)
+        )
 
     def forward(self, x, edge_index, batch):
         x_list = []
@@ -37,17 +43,7 @@ class SortPool(torch.nn.Module):
         x = self.pool1(x)
         x = F.relu(self.conv2(x))
         x = x.view(len(x), -1)
-        if hasattr(self, 'mlp'):
-            return self.mlp(x)
-        else:
-            mlp_indim = x.shape[-1]
-            self.mlp = nn.Sequential(
-                nn.Linear(mlp_indim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, self.outdim)
-            )
-            return self.mlp(x)
+        return self.mlp(x)
 
 
 @torch.no_grad()
@@ -85,10 +81,9 @@ for data in dataset:
     node_list.append(data.num_nodes)
 node_list.sort()
 k = node_list[int(len(node_list) * .4)]
-
 model = SortPool(dataset.num_features, hidden_dim, dataset.num_classes, k).to(device)
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
 train_set = DataLoader(train_data, shuffle=True, batch_size=128)
 val_set = DataLoader(val_data)
 test_set = DataLoader(test_data)
@@ -119,12 +114,12 @@ for i in range(epoch):
         best_val_acc = val_acc
         best_test_acc = test(model, test_set, device)
         epoch_to_break = 0
+        print(
+            f'Epoch{i}: TrainAcc: {train_sum_acc / train_cnt:.6f} TrainLoss:{train_loss / train_cnt:.6f} ValAcc:{val_acc:.6f}'
+            f' BestTestAcc: {best_test_acc:.6f}')
     else:
         epoch_to_break += 1
 
-    if epoch_to_break >= 100:
+    if epoch_to_break >= 500:
         break
 
-    print(
-        f'Epoch{i}: TrainAcc: {train_sum_acc / train_cnt:.6f} TrainLoss:{train_loss / train_cnt:.6f} ValAcc:{val_acc:.6f}'
-        f' BestTestAcc: {best_test_acc:.6f}')

@@ -70,7 +70,7 @@ def test(model, loader, device):
     return correct / len(loader.dataset)
 
 
-# ASAPool在PROTENINS上复现
+# MemPool在DD上复现
 input_path = './data'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = TUDataset(input_path, 'DD')

@@ -100,7 +100,7 @@ def test(model, loader, device):
     return correct / len(loader.dataset)
 
 
-# DiffPool在ENZYMES的复现
+# MincutPool在Proteins的复现
 input_path = '../data'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = TUDataset(input_path, 'PROTEINS')
